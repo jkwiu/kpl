@@ -1,0 +1,32 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      java: corretto8
+    docker: 18
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - aws --version
+      - $(aws ecr get-login --region $AWS_DEFAULT_REGION --no-include-email)
+  build:
+    commands:
+      - echo Maven Build started
+      - mvn package 
+      - echo Build started on `date`
+      - echo Building the Docker image...          
+      - docker build -t jk-test .
+      - docker tag jk-test:latest 090902434044.dkr.ecr.ap-northeast-2.amazonaws.com/jk-test:latest
+  post_build:
+    commands:
+      - echo Build completed on `date`
+      - echo Pushing the Docker images...
+      - docker push 090902434044.dkr.ecr.ap-northeast-2.amazonaws.com/jk-test:latest
+      - echo Writing image definitions file...
+      - printf '[{"name":"hello-jk","imageUri":"%s"}]' 090902434044.dkr.ecr.ap-northeast-2.amazonaws.com/jk-test:latest > imagedefinitions.json
+artifacts:
+    files: 
+      - imagedefinitions.json
+      - appspec.yml
+      - taskdef.json
